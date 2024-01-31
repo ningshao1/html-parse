@@ -1,0 +1,1006 @@
+<dw-content class="{{
+  salesman_name
+    ? 'has_salesman dw-f-content-list layoutClass sales_layout'
+    : 'dw-f-content-list layoutClass sales_layout'
+}}" (click)="hideActBox()">
+  <div class="welcome" *ngIf="salesman_name">
+    欢迎您，<span>{{ salesman_name }}</span>
+  </div>
+  <div class="issue_layout_head">
+    <h2 class="issue_layout_title">
+      <span style="margin-left: 3px">服务工单 </span>
+      <!-- <div style="float: right; width: 248px;">
+      <dw-input-group dwSearch [dwAddOnAfter]="suffixIconButton">
+        <input dw-input placeholder="搜寻客户、产品、型号">
+        <ng-template #suffixIconButton>
+          <button dw-button dwType="primary" dwSearch><em dw-icon dwType="search"></em></button>
+        </ng-template>
+      </dw-input-group>
+    </div> -->
+    </h2>
+  </div>
+  <dw-divider></dw-divider>
+  <app-service-order-dispatch #childDispatch [isDispatchVisible]="isDispatchVisible"
+    (visibleChanged)="changeDispatchVisible($event)">
+  </app-service-order-dispatch>
+  <app-service-order-distribution #childDistribution [isDistributionVisible]="isDistributionVisible"
+    (visibleChanged)="changeDistributionVisible($event)">
+  </app-service-order-distribution>
+  <app-service-order-cancel #childCancel [isCancelVisible]="isCancelVisible"
+    (visibleChanged)="changeCancelVisible(false)">
+  </app-service-order-cancel>
+  <app-export #childExport [isExportVisible]="isExportVisible" (visibleChanged)="changeExportVisible()">
+  </app-export>
+  <app-salesman-certificate #childSalesman [isSalesmanVisible]="isSalesmanVisible"
+    (visibleChanged)="changeSalesmanVisible($event)">
+  </app-salesman-certificate>
+  <div class="{{ salesman_name ? 'content-box content-box2' : 'content-box' }}">
+    <form class="sales_issue_form sales_form sales_shadow" [formGroup]="searchForm">
+      <!-- 查詢條件 -->
+      <div dw-row class="search-form-box">
+        <div class="search-input">
+          <div class="label">
+            日&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;期
+          </div>
+          <dw-form-item class="form-input date-picker">
+            <dw-form-control>
+              <dw-range-picker (dwOnOpenChange)="onOpenRange($event)" formControlName="date_range" style="width: 100%"
+                id="service-order-list-query-date">
+              </dw-range-picker>
+            </dw-form-control>
+          </dw-form-item>
+        </div>
+        <div class="search-input">
+          <div class="label">客户名称</div>
+          <dw-form-item class="form-input">
+            <dw-form-control>
+              <dw-input-group dwSearch [dwSuffix]="customerData">
+                <input type="text" dw-input readonly style="width: 100%" dwMode="multiple"
+                  formControlName="customer_name" />
+              </dw-input-group>
+              <ng-template #customerData>
+                <em dw-icon class="ant-input-clear-icon" dwTheme="fill" dwType="close-circle"
+                  *ngIf="searchForm.value.customer_name" (click)="clear('customer')"></em>
+                <button dw-button dwType="primary" dwSearch (click)="openCustomer()" dw-analyticsOn="click"
+                  [angularticsCategory]="'服务工单'" id="service-order-list-query-customer" type="button"
+                  angularticsAction="查询条件-点击选择客户名称" angularticsLabel="{{
+                  userInfo.tenantId + ',' + userInfo.userId
+                }}">
+                  <em dw-icon dwType="search"></em>
+                </button>
+              </ng-template>
+            </dw-form-control>
+          </dw-form-item>
+        </div>
+        <div class="search-input">
+          <div class="label" *ngIf="fileType === '1'">
+            序&nbsp;&nbsp;列&nbsp;&nbsp;号
+          </div>
+          <div class="label" *ngIf="fileType === '2'">
+            项&nbsp;&nbsp;目&nbsp;&nbsp;号
+          </div>
+          <div class="label" *ngIf="fileType === '0'">序列号/项目号</div>
+          <dw-form-item class="form-input">
+            <dw-form-control>
+              <dw-input-group [dwSuffix]="SNSeachData">
+                <input type="text" dw-input style="width: 100%" formControlName="sn" />
+              </dw-input-group>
+              <ng-template #SNSeachData>
+                <em dw-icon class="ant-input-clear-icon" dwTheme="fill" dwType="close-circle"
+                  *ngIf="searchForm.value.sn" (click)="clear('sn')"></em>
+              </ng-template>
+            </dw-form-control>
+          </dw-form-item>
+        </div>
+        <div class="search-input" style="width: 172px">
+          <button dw-button [dwType]="'primary'" (click)="search.pageIndex = 1; loadData()"
+            angularticsAction="查询条件-点击查询按钮" dw-analyticsOn="click" [angularticsCategory]="'服务工单'"
+            angularticsLabel="{{ userInfo.tenantId + ',' + userInfo.userId }}">
+            {{ "查询" | translate }}
+          </button>
+          <button dw-button [dwType]="'defult'" (click)="reset()" angularticsAction="查询条件-点击重置按钮" dw-analyticsOn="click"
+            [angularticsCategory]="'服务工单'" angularticsLabel="{{ userInfo.tenantId + ',' + userInfo.userId }}">
+            {{ "重置" | translate }}
+          </button>
+          <div class="isExpand" (click)="isShowSearchExpand()">
+            {{ isSearchExpand ? "收起" : "展开" }}
+            <em dw-icon [dwType]="isSearchExpand ? 'up' : 'down'" dwTheme="outline"></em>
+          </div>
+        </div>
+      </div>
+      <ng-container *ngIf="isSearchExpand">
+        <div dw-row class="search-form-box">
+          <div class="search-input">
+            <div class="label">分&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;类</div>
+            <dw-form-item class="form-input date-picker">
+              <dw-form-control>
+                <dw-input-group dwSearch [dwSuffix]="itemGroupData">
+                  <input type="text" dw-input readonly style="width: 100%" dwMode="multiple"
+                    formControlName="item_group_name" />
+                </dw-input-group>
+                <ng-template #itemGroupData>
+                  <em dw-icon class="ant-input-clear-icon" dwTheme="fill" dwType="close-circle"
+                    *ngIf="searchForm.value.item_group_name" (click)="clear('item_group')"></em>
+                  <button dw-button dwType="primary" dwSearch (click)="openItemGroup()" dw-analyticsOn="click"
+                    [angularticsCategory]="'服务工单'" id="service-order-list-query-group" angularticsAction="查询条件-点击选择产品分类"
+                    angularticsLabel="{{
+                    userInfo.tenantId + ',' + userInfo.userId
+                  }}" type="button">
+                    <em dw-icon dwType="search"></em>
+                  </button>
+                </ng-template>
+              </dw-form-control>
+            </dw-form-item>
+          </div>
+          <div class="search-input">
+            <div class="label">服务站点</div>
+            <dw-form-item class="form-input">
+              <dw-form-control>
+                <dw-input-group dwSearch [dwSuffix]="serviceSiteData">
+                  <input type="text" dw-input readonly style="width: 100%" dwMode="multiple"
+                    formControlName="service_site_name" />
+                </dw-input-group>
+                <ng-template #serviceSiteData>
+                  <em dw-icon class="ant-input-clear-icon" dwTheme="fill" dwType="close-circle"
+                    *ngIf="searchForm.value.service_site_name" (click)="clear('service_site')"></em>
+                  <button dw-button dwType="primary" dwSearch (click)="openServiceSite()" dw-analyticsOn="click"
+                    [angularticsCategory]="'服务工单'" id="service-order-list-query-site" angularticsAction="查询条件-点击选择服务站点"
+                    angularticsLabel="{{
+                    userInfo.tenantId + ',' + userInfo.userId
+                  }}" type="button">
+                    <em dw-icon dwType="search"></em>
+                  </button>
+                </ng-template>
+              </dw-form-control>
+            </dw-form-item>
+          </div>
+          <div class="search-input">
+            <div class="label">
+              备<span
+                *ngIf="fileType === '0'">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;注
+            </div>
+            <dw-form-item class="form-input">
+              <dw-form-control>
+                <dw-input-group [dwSuffix]="remarkSeachData">
+                  <input type="text" dw-input style="width: 100%" formControlName="remark" />
+                </dw-input-group>
+                <ng-template #remarkSeachData>
+                  <em dw-icon class="ant-input-clear-icon" dwTheme="fill" dwType="close-circle"
+                    *ngIf="searchForm.value.remark" (click)="clear('remark')"></em>
+                </ng-template>
+              </dw-form-control>
+            </dw-form-item>
+          </div>
+        </div>
+        <div dw-row class="search-form-box">
+          <div class="search-input">
+            <div class="label">
+              单&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;号
+            </div>
+            <dw-form-item class="form-input">
+              <dw-form-control>
+                <dw-input-group [dwSuffix]="docNoSeachData">
+                  <input type="text" dw-input style="width: 100%" formControlName="doc_no" />
+                </dw-input-group>
+                <ng-template #docNoSeachData>
+                  <em dw-icon class="ant-input-clear-icon" dwTheme="fill" dwType="close-circle"
+                    *ngIf="searchForm.value.doc_no" (click)="clear('doc_no')"></em>
+                </ng-template>
+              </dw-form-control>
+            </dw-form-item>
+          </div>
+
+          <div class="search-input">
+            <div class="label">工&nbsp;程&nbsp;&nbsp;师</div>
+            <dw-form-item class="form-input">
+              <dw-form-control>
+                <dw-input-group dwSearch [dwSuffix]="employee">
+                  <input type="text" dw-input readonly style="width: 100%" dwMode="multiple"
+                    formControlName="employee_name" />
+                </dw-input-group>
+                <ng-template #employee>
+                  <em dw-icon class="ant-input-clear-icon" dwTheme="fill" dwType="close-circle"
+                    *ngIf="searchForm.value.employee_name" (click)="clear('employee')"></em>
+                  <button dw-button dwType="primary" dwSearch (click)="openEmployee($event)" dw-analyticsOn="click"
+                    [angularticsCategory]="'服务工单'" id="service-order-list-query-site" angularticsAction="查询条件-工程师"
+                    angularticsLabel="{{
+                    userInfo.tenantId + ',' + userInfo.userId
+                  }}" type="button">
+                    <em dw-icon dwType="search"></em>
+                  </button>
+                </ng-template>
+              </dw-form-control>
+            </dw-form-item>
+          </div>
+
+          <div class="search-input">
+            <div class="label">
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            </div>
+            <dw-form-item class="form-input">
+              <dw-form-control>
+                <dw-input-group>
+                  <label class="check-container" dw-checkbox formControlName="isNoPartsReplacement"
+                    (ngModelChange)="checkboxChange($event, '1')" style="white-space: nowrap">
+                    服务报告无零配件更换
+                  </label>
+                </dw-input-group>
+              </dw-form-control>
+            </dw-form-item>
+          </div>
+
+        </div>
+        <div dw-row class="search-form-box">
+          <div class="search-input">
+            <div class="label max-label">
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            </div>
+            <dw-form-item class="form-input">
+              <dw-form-control>
+                <dw-input-group>
+                  <label dw-checkbox formControlName="isNotSolvedDocuments"
+                    (ngModelChange)="checkboxChange($event, '2')">
+                    问题未解决
+                  </label>
+                </dw-input-group>
+              </dw-form-control>
+            </dw-form-item>
+          </div>
+        </div>
+      </ng-container>
+    </form>
+
+    <div class="tag-wrap">
+      <div class="tag-label">状态：</div>
+      <div class="tags">
+        <dw-tag *ngFor="let tag of fiterTags; index as i" [(dwChecked)]="tag.checked" dwMode="checkable"
+          (dwCheckedChange)="handleChange($event, tag)" style="font-size: 15px; line-height: 28px"
+          [id]="'service-order-list-ststus-tag' + i">
+          {{ tag.text }}
+        </dw-tag>
+      </div>
+    </div>
+    <div class="service_order_list dw-f-table sales_table">
+      <div dw-row class="dw-f-btn-bar-action">
+        <div dw-col>
+          <button dw-button type="button" [dwType]="'primary'" dwActionAuthorized [dwActionId]="'add'"
+            [dwDefaultAuthorized]="'disabled'" (click)="create()" id="service-order-list-create-in"
+            [angularticsCategory]="'服务工单'" angularticsAction="新建-进入新建页面" dw-analyticsOn="click"
+            angularticsLabel="{{ userInfo.tenantId + ',' + userInfo.userId }}">
+            <em dw-icon dwType="plus"></em>
+            <span translate>新建</span>
+          </button>
+          <button dw-button type="button" [dwType]="'defult'" dwActionAuthorized [dwActionId]="'assign'"
+            [dwDefaultAuthorized]="'disabled'" (click)="
+            multyAssign();
+            childDistribution.initData(
+              assign_service_order_ids,
+              assign_service_order_Infos_list
+            )
+          " [angularticsCategory]="'服务工单'" angularticsAction="浏览页操作-点击批量派工" dw-analyticsOn="click"
+            angularticsLabel="{{ userInfo.tenantId + ',' + userInfo.userId }}" *ngIf="state === '1'">
+            <div class="action-grid ">
+              <div class="act-item">
+                <span translate>
+                  <img class="action-icon new-func-icon" src="../../../../../../assets/img/icon_importnew_nor.png"
+                    alt="" />
+                  <img class="action-icon new-func-icon" src="../../../../../../assets/img/icon_importnew_pre.png"
+                    alt="" />
+                  批量分配
+                </span>
+              </div>
+            </div>
+          </button>
+          <button dw-button type="button" [dwType]="'defult'" dwActionAuthorized [dwActionId]="'distribute'"
+            [dwDefaultAuthorized]="'disabled'" (click)="
+            multyDistribute();
+            childDispatch.initData({service_order_id:distribute_service_order_ids,technologyList:[],isMul:true})
+          " [angularticsCategory]="'服务工单'" angularticsAction="浏览页操作-点击批量派工" dw-analyticsOn="click"
+            angularticsLabel="{{ userInfo.tenantId + ',' + userInfo.userId }}" *ngIf="state === '2'">
+            <div class="action-grid ">
+              <div class="act-item">
+                <span translate>
+                  <img class="action-icon new-func-icon" src="../../../../../../assets/img/icon_distributenew_nor.png"
+                    alt="" />
+                  <img class="action-icon new-func-icon" src="../../../../../../assets/img/icon_distributenew_pre.png"
+                    alt="" />
+                  批量派工</span>
+              </div>
+            </div>
+          </button>
+          <button dw-button type="button" [dwType]="'defult'" dwActionAuthorized [dwActionId]="'exportrepairdetails'"
+            [dwLoading]="isDownloading" [dwDefaultAuthorized]="'disabled'"
+            (click)="exportRecord(); childExport.initData()" [angularticsCategory]="'服务工单'"
+            angularticsAction="浏览页操作-点击导出维修记录明细" dw-analyticsOn="click"
+            angularticsLabel="{{ userInfo.tenantId + ',' + userInfo.userId }}">
+            <em dw-icon dwType="upload"></em>
+            <span translate>导出维修记录明细</span>
+          </button>
+        </div>
+      </div>
+      <ng-container *ngIf="showTable">
+        <dw-table #dwTable [dwTableId]="'service-order-list' + state" [dwData]="dataList"
+          [dwScroll]="{ x: '1500px', y: 'calc(100vh - 171px - 140px)' }" [(dwPageIndex)]="search.pageIndex"
+          [(dwPageSize)]="search.pageSize" dwShowSizeChanger (dwCurrentPageDataChange)="onCurrentPageDataChange($event)"
+          [dwShowTotal]="totalTemplate">
+          <thead (dwSortOrderChange)="order($event)">
+            <tr dw-tr dwDropColumns>
+              <ng-container *ngIf="
+                (state === '2' && distributeShow) ||
+                (state === '1' && assignShow)
+              ">
+                <th [dwChecked]="checked" [dwIndeterminate]="indeterminate" (dwCheckedChange)="onAllChecked($event)"
+                  dwLeft dwWidth="40px" *dwColumnId="'checked'"></th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="40px" *dwColumnId="'expand'"></th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="148px" *dwColumnId="'receive_time'" dwDragDrop>
+                  <span translate>提交时间</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="152px" *dwColumnId="'doc_no'" dwDragDrop>
+                  <span translate>单号</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="100px" *dwColumnId="'customer_name'" dwDragDrop>
+                  <span translate>客户名称</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="fileType === '0'">
+                <th dwWidth="100px" dw-th *dwColumnId="'file_type_name'" dwDragDrop>
+                  <span translate>类型</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="100px" *dwColumnId="'product_file_name'" dwDragDrop>
+                  <span translate>名称</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="120px" *dwColumnId="'sn'" dwDragDrop>
+                  <span translate *ngIf="fileType === '1'">序列号</span>
+                  <span translate *ngIf="fileType === '2'">项目号</span>
+                  <span translate *ngIf="fileType === '0'">序列号/项目号</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="100px" *dwColumnId="'specification'" dwDragDrop>
+                  <span translate>规格</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="100px" *dwColumnId="'model'" dwDragDrop>
+                  <span translate>型号</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="100px" *dwColumnId="'service_site_name'" dwDragDrop>
+                  <span translate>服务站点</span>
+                </th>
+              </ng-container>
+              <!-- 除了待分配（1）、待抢单（grabOrder）、待派工(2)、已取消(7) -->
+              <ng-container
+                *ngIf="showTable && state !== '1' && state !== '2' && state !== '7' && state!=='grabOrder' ">
+                <th dwWidth="100px" *dwColumnId="'employee_name'" dwDragDrop>
+                  <span translate>工程师</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="100px" *dwColumnId="'service_type_name'" dwDragDrop>
+                  <span translate>服务类型</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="100px" *dwColumnId="'description'" dwDragDrop>
+                  <span translate>问题描述</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="enable_so_pool && state === ''">
+                <th dwWidth="108px" dwAlign="center" *dwColumnId="'assign_to_pool'" dwDragDrop>
+                  <span translate>分配至工单池</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="100px" *dwColumnId="'channel'" dwDragDrop>
+                  <span translate>报修渠道</span>
+                </th>
+              </ng-container>
+              <!-- 除了待分配（1）、待抢单（grabOrder）、待派工(2)、已取消(7) -->
+              <ng-container
+                *ngIf="showTable && state !== '1' && state !== '2' && state !== '7' && state!=='grabOrder' ">
+                <th dwWidth="100px" *dwColumnId="'expected_finished_date'" dwDragDrop>
+                  <span translate>预完日</span>
+                </th>
+              </ng-container>
+
+              <ng-container *ngIf="showTable">
+                <th dwWidth="100px" *dwColumnId="'remark'" dwDragDrop>
+                  <span translate>备注</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="72px" *dwColumnId="'state'" dwRight dwDragDrop>
+                  <span translate>状态</span>
+                </th>
+              </ng-container>
+              <ng-container *ngIf="showTable">
+                <th dwWidth="120px" class="align-center" *dwColumnId="'operation'" dwRight>
+                  <span translate>操作</span>
+                </th>
+              </ng-container>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let data of dwTable.data; index as i">
+              <tr dwReorderColumns [style]="data.expand ? 'background: #f5f5f5;' : ''">
+                <ng-container *ngIf="
+                  (state === '2' && distributeShow) ||
+                  (state === '1' && assignShow)
+                ">
+                  <td [dwChecked]="setOfCheckedId.has(data.service_order_id)" [dwDisabled]="
+                    state === '1' ? data.assignDisabled : data.disabled
+                  " (dwCheckedChange)="
+                    onItemChecked(data, data.service_order_id, $event)
+                  " dwLeft dwWidth="40" *dwColumnId="'checked'"></td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwWidth="40" *dwColumnId="'expand'" dwAlign="center">
+                    <ng-container *ngIf="
+                      data.child &&
+                      data.child.child &&
+                      data.child.child.length
+                    ">
+                      <span dw-icon dwType="plus-square" dwTheme="outline" class="expend" *ngIf="!data.expand"
+                        (click)="orderExpand(data)"></span>
+                      <span dw-icon dwType="minus-square" dwTheme="outline" class="expend" *ngIf="data.expand"
+                        (click)="orderExpand(data)"></span>
+                    </ng-container>
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'receive_time'">
+                    {{ data.receive_time | date : "yyyy-MM-dd HH:mm" }}
+                    <div class="overtime" *ngIf="
+                      data.flag == 1 &&
+                      data.state === '2' &&
+                      data.assign_to_pool
+                    ">
+                      超时无人抢单
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'doc_no'">
+                    <a (click)="detail(data.service_order_id)" id="service-order-list-detail"
+                      [angularticsCategory]="'服务工单'" angularticsAction="详情-点击查看详情" dw-analyticsOn="click"
+                      angularticsLabel="{{
+                      userInfo.tenantId + ',' + userInfo.userId
+                    }}">{{ data.doc_no }}</a>
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'customer_name'">
+                    {{ data.customer_name }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="fileType === '0'">
+                  <td dwEllipsis *dwColumnId="'file_type_name'">
+                    {{ data.type === "1" ? "单机" : "产线/项目" }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'product_file_name'">
+                    {{ data.product_file_name }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'sn'">
+                    {{ data.sn }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'specification'">
+                    {{ data.specification }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'model'">
+                    {{ data.model }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'service_site_name'">
+                    {{ data.service_site_name }}
+                  </td>
+                </ng-container>
+                <ng-container
+                  *ngIf="showTable && state !== '1' && state !== '2' && state !== '7' && state!=='grabOrder' ">
+                  <td dwEllipsis *dwColumnId="'employee_name'">
+                    {{ data.employee_name }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'service_type_name'">
+                    {{ data.service_type_name }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis title="{{ data.fault_phrase }}{{
+                    data.fault_phrase && data.description ? '/' : ''
+                  }}{{ data.description }}" *dwColumnId="'description'">
+                    {{ data.fault_phrase
+                    }}<span *ngIf="data.fault_phrase && data.description">/</span>{{ data.description }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="enable_so_pool && state === ''">
+                  <td dwEllipsis dwAlign="center" *dwColumnId="'assign_to_pool'">
+                    {{ data.assign_to_pool ? "是" : "否" }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'channel'">
+                    {{ data.channel ? getChannel(data.channel) : "电话" }}
+                    {{
+                    data.channel === "5" && data.channel_explanation
+                    ? "(" + data.channel_explanation + ")"
+                    : ""
+                    }}
+                  </td>
+                </ng-container>
+                <!-- 除了待分配（1）、待抢单（grabOrder）、待派工(2)、已取消(7) -->
+                <ng-container
+                  *ngIf="showTable && state !== '1' && state !== '2' && state !== '7' && state!=='grabOrder' ">
+                  <td dwEllipsis *dwColumnId="'expected_finished_date'" [title]="data.expected_finished_date ">
+                    {{ data.expected_finished_date }}
+                  </td>
+                </ng-container>
+
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis [title]="data.remark" *dwColumnId="'remark'">
+                    {{ data.remark }}
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td dwEllipsis *dwColumnId="'state'" dwRight>
+                    <dw-badge dwColor="#14AAFF" *ngIf="data.state === '1'" [dwText]="'待分配'"></dw-badge>
+                    <dw-badge dwColor="#6D65F9" *ngIf="data.state === '2' && data.assign_to_pool" [dwText]="'待抢单'">
+                    </dw-badge>
+                    <dw-badge dwColor="#21D4E5" *ngIf="data.state === '2' && !data.assign_to_pool" [dwText]="'待派工'">
+                    </dw-badge>
+                    <dw-badge dwColor="#FF993E" *ngIf="data.state === '3'" [dwText]="'待服务'"></dw-badge>
+                    <dw-badge dwColor="#FDC24B" *ngIf="data.state === '4'" [dwText]="'待回单'"></dw-badge>
+                    <dw-badge dwColor="#F06251" *ngIf="data.state === '5'" [dwText]="'待评价'"></dw-badge>
+                    <dw-badge dwColor="#21C784" *ngIf="data.state === '6'" [dwText]="'已关闭'"></dw-badge>
+                    <dw-badge dwColor="#5F677D" *ngIf="data.state === '7'" [dwText]="'已取消'"></dw-badge>
+                  </td>
+                </ng-container>
+                <ng-container *ngIf="showTable">
+                  <td class="action-td" class="align-center" *dwColumnId="'operation'" dwRight>
+                    <a dw-dropdown [dwDropdownMenu]="menu" dwTrigger="click" [dwPlacement]="'bottomCenter'"
+                      [dwClickHide]="dwClickHide" *ngIf="(data.state == '1' && assignShow) ||
+                      (data.state == '2' && assignShow) ||
+                      (data.state == '2' && !data.assign_to_pool && distributeShow && (data.service_site_id == currentServiceSiteId ||(distribution_all && service_site_type === '1' ))) ||
+                      (data.state == '1'&& modifyShow) ||
+                      (data.state == '1' || data.state == '2' && cancelShow) ||
+                      (data.state == '1' || data.state == '2' && deleteShow)
+                      ">
+                      <em dw-icon dwType="ellipsis" dwTheme="outline"></em>
+                    </a>
+                    <dw-dropdown-menu #menu="dwDropdownMenu">
+                      <ul dw-menu>
+
+                        <!-- 开始分配 data.state == '1' && assign-->
+                        <li *ngIf="data.state == '1'" dw-menu-item dwActionAuthorized [dwActionId]="'assign'"
+                          [dwDefaultAuthorized]="'disabled'">
+                          <span dw-button [dwType]="'primary'" class="act-item" (click)="
+                          modifyForChild('Distribution');
+                          childDistribution.initData(
+                            data.service_order_id,
+                            data
+                          )
+                        " [angularticsCategory]="'服务工单'" angularticsAction="浏览页操作-点击分配" dw-analyticsOn="click"
+                            angularticsLabel="{{
+                          userInfo.tenantId + ',' + userInfo.userId
+                        }}" id="service-order-list-assign">
+                            <img class="action-icon" src="../../../../../../assets/img/icon_assign_nor.png" alt="分配" />
+                            <img class="action-icon" src="../../../../../../assets/img/icon_assign_pre.png" alt="分配" />
+                            {{ "开始分配" }}
+                          </span>
+                        </li>
+                        <!-- 重新分配  data.state == '2' && assign-->
+                        <li *ngIf="data.state == '2'" dw-menu-item dwActionAuthorized [dwActionId]="'assign'"
+                          [dwDefaultAuthorized]="'disabled'">
+                          <span dw-button [dwType]="'primary'" class="act-item" (click)="
+                      modifyForChild('Distribution');
+                      childDistribution.initData(
+                        data.service_order_id,
+                        data
+                      )
+                        " [angularticsCategory]="'服务工单'" angularticsAction="浏览页操作-点击分配" dw-analyticsOn="click"
+                            angularticsLabel="{{
+                          userInfo.tenantId + ',' + userInfo.userId
+                        }}" id="service-order-list-assign">
+                            <img class="action-icon" src="../../../../../../assets/img/icon_assign_nor.png" alt="分配" />
+                            <img class="action-icon" src="../../../../../../assets/img/icon_assign_pre.png" alt="分配" />
+                            {{ "重新分配" }}
+                          </span>
+                        </li>
+                        <!-- 派工 data.state == '2' &&
+                                  !data.assign_to_pool &&
+                                  distribute &&
+                                  (data.service_site_id == currentServiceSiteId ||
+                                  (distribution_all && service_site_type === '1' ))
+                                -->
+                        <li *ngIf="
+                        data.state == '2' &&
+                        !data.assign_to_pool &&
+                        (data.service_site_id == currentServiceSiteId ||
+                          (distribution_all && service_site_type === '1'))
+                      " dw-menu-item dwActionAuthorized [dwActionId]="'distribute'" [dwDefaultAuthorized]="'disabled'"
+                          (click)="
+                        modifyForChild('Dispatch');
+                        childDispatch.initData({service_order_id:data.service_order_id,service_mode:data.default_service_mode})
+                      " [angularticsCategory]="'服务工单'" angularticsAction="浏览页操作-点击派工" dw-analyticsOn="click"
+                          angularticsLabel="{{
+                        userInfo.tenantId + ',' + userInfo.userId
+                      }}" id="service-order-list-distribute">
+                          <span dw-button [dwType]="'primary'" class="act-item">
+                            <img class="action-icon" src="../../../../../../assets/img/icon_distribute_nor.png"
+                              alt="派工" />
+                            <img class="action-icon" src="../../../../../../assets/img/icon_distribute_pre.png"
+                              alt="派工" />
+                            {{ "开始派工" }}
+                          </span>
+                        </li>
+                        <!-- 编辑  data.state == '1'&& modify-->
+                        <li *ngIf="data.state == '1'" dw-menu-item dwActionAuthorized [dwActionId]="'modify'"
+                          [dwDefaultAuthorized]="'disabled'" (click)="modify(data.service_order_id, 'modify')"
+                          title="编辑" [angularticsCategory]="'服务工单'" angularticsAction="修改-进入修改页面" dw-analyticsOn="click"
+                          angularticsLabel="{{
+                        userInfo.tenantId + ',' + userInfo.userId
+                      }}" id="service-order-list-modify-in">
+                          <span dw-button [dwType]="'primary'" class="act-item">
+                            <img class="action-icon" src="../../../../../../assets/img/icon_edit.png" alt="编辑" />
+                            <img class="action-icon" src="../../../../../../assets/img/icon_edit_hover.png" alt="编辑" />
+                            编辑
+                          </span>
+                        </li>
+                        <!-- 取消  data.state == '1' || data.state == '2' && cancel-->
+                        <li *ngIf="data.state == '1' || data.state == '2'" dw-menu-item dwActionAuthorized
+                          [dwActionId]="'cancel'" [dwDefaultAuthorized]="'disabled'" (click)="
+                      modifyForChild('Cancel');
+                      childCancel.initData(data.service_order_id)
+                      " [angularticsCategory]="'服务工单'" angularticsAction="浏览页操作-点击取消" dw-analyticsOn="click"
+                          angularticsLabel="{{
+                      userInfo.tenantId + ',' + userInfo.userId
+                      }}" id="service-order-list-cancel">
+                          <span dw-button [dwType]="'primary'" class="act-item">
+                            <img class="action-icon" src="../../../../../../assets/img/icon_cancel_nor.png" alt="取消" />
+                            <img class="action-icon" src="../../../../../../assets/img/icon_cancel_pre.png" alt="取消" />
+                            取消
+                          </span>
+                        </li>
+                        <!-- 删除 data.state == '1' || data.state == '2' && delete-->
+                        <li *ngIf="data.state == '1' || data.state == '2'" dw-menu-item dwActionAuthorized
+                          [dwActionId]="'delete'" [dwDefaultAuthorized]="'disabled'">
+                          <div dw-popconfirm [dwPopconfirmTitle]="'确认删除'" [dwOkText]="'dw-determine' | translate"
+                            [dwCancelText]="'dw-cancel' | translate" [dwPopconfirmPlacement]="'topRight'"
+                            (dwOnConfirm)="delete(data.service_order_id)">
+                            <span dw-button [dwType]="'primary'" class="act-item"
+                              [angularticsCategory]="'menu.isa-order'|translate"
+                              [angularticsAction]="'info.search-detail'|translate"
+                              angularticsLabel="{{userInfo.tenantId + ',' + userInfo.userId}}" dw-analyticsOn="click">
+                              <img class="action-icon" style="margin-top: -3px"
+                                src="../../../../../../assets/img/icon_delete.png" alt="删除" />
+                              <img class="action-icon" style="margin-top: -3px"
+                                src="../../../../../../assets/img/icon_delete_hover.png" alt="删除" />
+                              删除
+                            </span>
+                          </div>
+                        </li>
+                      </ul>
+                    </dw-dropdown-menu>
+                    <a *ngIf="data.problem_count >0 && permissionNameList.includes('problem-feedback') && (data.state == '4' || data.state == '5' || data.state == '6')" (click)="jumpToQuestion(data)">查看问题</a>
+                  </td>
+                </ng-container>
+              </tr>
+              <ng-container *ngIf="
+                data.expand &&
+                data.child &&
+                data.child.child &&
+                data.child.child.length
+              ">
+                <ng-container *ngFor="let item of data.child.child; index as ids">
+                  <tr style="background: #f5f5f5" dwReorderColumns>
+                    <ng-container *ngIf="showTable">
+                      <ng-container *ngIf="state === '2' || state === '1'">
+                        <td [dwChecked]="setOfCheckedId.has(item.service_order_id)" [dwDisabled]="
+                        state === '1' ? item.assignDisabled : item.disabled
+                      " (dwCheckedChange)="
+                        onItemChecked(item, item.service_order_id, $event)
+                      " dwLeft dwWidth="40" *dwColumnId="'checked'"></td>
+                      </ng-container>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwWidth="40" *dwColumnId="'expand'" dwAlign="center"></td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'receive_time'">
+                        {{ item.receive_time | date : "yyyy-MM-dd HH:mm" }}
+                        <div class="overtime" *ngIf="
+                          item.flag == 1 &&
+                          item.state === '2' &&
+                          item.assign_to_pool
+                        ">
+                          超时无人抢单
+                        </div>
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'doc_no'">
+                        <a (click)="detail(item.service_order_id)" id="service-order-list-detail"
+                          [angularticsCategory]="'服务工单'" angularticsAction="详情-点击查看详情" dw-analyticsOn="click"
+                          angularticsLabel="{{
+                          userInfo.tenantId + ',' + userInfo.userId
+                        }}">{{ item.doc_no }}</a>
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'customer_name'">
+                        {{ item.customer_name }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="fileType === '0'">
+                      <td dwEllipsis *dwColumnId="'file_type_name'">
+                        {{ item.type === "1" ? "单机" : "产线/项目" }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'product_file_name'">
+                        {{ item.product_file_name }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'sn'">
+                        {{ item.sn }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'specification'">
+                        {{ item.specification }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'model'">
+                        {{ item.model }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'service_site_name'">
+                        {{ item.service_site_name }}
+                      </td>
+                    </ng-container>
+                    <ng-container
+                      *ngIf="showTable && state !== '1' && state !== '2' && state !== '7' && state!=='grabOrder' ">
+                      <td dwEllipsis *dwColumnId="'employee_name'">
+                        {{ data.employee_name }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'service_type_name'">
+                        {{ item.service_type_name }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis title="{{ item.fault_phrase }}{{
+                        item.fault_phrase && item.description ? '/' : ''
+                      }}{{ item.description }}" *dwColumnId="'description'">
+                        {{ item.fault_phrase
+                        }}<span *ngIf="item.fault_phrase && item.description">/</span>{{ item.description }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="enable_so_pool && state === ''">
+                      <td dwEllipsis dwAlign="center" *dwColumnId="'assign_to_pool'">
+                        {{ item.assign_to_pool ? "是" : "否" }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'channel'">
+                        {{ item.channel ? getChannel(item.channel) : "电话" }}
+                        {{
+                        item.channel === "5" && item.channel_explanation
+                        ? "(" + item.channel_explanation + ")"
+                        : ""
+                        }}
+                      </td>
+                    </ng-container>
+                    <!-- 除了待分配（1）、待抢单（grabOrder）、待派工(2)、已取消(7) -->
+                    <ng-container
+                      *ngIf="showTable && state !== '1' && state !== '2' && state !== '7' && state!=='grabOrder' ">
+                      <td dwEllipsis *dwColumnId="'expected_finished_date'" [title]="data.expected_finished_date ">
+                        {{ data.expected_finished_date }}
+                      </td>
+                    </ng-container>
+
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis [title]="item.remark" *dwColumnId="'remark'">
+                        {{ item.remark }}
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td dwEllipsis *dwColumnId="'state'" dwRight>
+                        <dw-badge dwColor="#14AAFF" *ngIf="item.state === '1'" [dwText]="'待分配'"></dw-badge>
+                        <dw-badge dwColor="#6D65F9" *ngIf="item.state === '2' && item.assign_to_pool" [dwText]="'待抢单'">
+                        </dw-badge>
+                        <dw-badge dwColor="#21D4E5" *ngIf="item.state === '2' && !item.assign_to_pool" [dwText]="'待派工'">
+                        </dw-badge>
+                        <dw-badge dwColor="#FF993E" *ngIf="item.state === '3'" [dwText]="'待服务'"></dw-badge>
+                        <dw-badge dwColor="#FDC24B" *ngIf="item.state === '4'" [dwText]="'待回单'"></dw-badge>
+                        <dw-badge dwColor="#F06251" *ngIf="item.state === '5'" [dwText]="'待评价'"></dw-badge>
+                        <dw-badge dwColor="#21C784" *ngIf="item.state === '6'" [dwText]="'已关闭'"></dw-badge>
+                        <dw-badge dwColor="#5F677D" *ngIf="item.state === '7'" [dwText]="'已取消'"></dw-badge>
+                      </td>
+                    </ng-container>
+                    <ng-container *ngIf="showTable">
+                      <td class="action-td" class="align-center" *dwColumnId="'operation'" dwRight>
+                        <a dw-dropdown [dwDropdownMenu]="menu" dwTrigger="click" [dwPlacement]="'bottomCenter'"
+                          [dwClickHide]="dwClickHide" *ngIf="(item.state == '1' && assignShow) ||
+                      (item.state == '2' && assignShow) ||
+                      (item.state == '2' && !item.assign_to_pool && distributeShow && (item.service_site_id == currentServiceSiteId ||(distribution_all && service_site_type === '1' ))) ||
+                      (item.state == '1'&& modifyShow) ||
+                      (item.state == '1' || item.state == '2' && cancelShow) ||
+                      (item.state == '1' || item.state == '2' && deleteShow)
+                        " >
+                          <em dw-icon dwType="ellipsis" dwTheme="outline"></em>
+                        </a>
+                        <dw-dropdown-menu #menu="dwDropdownMenu">
+                          <ul dw-menu>
+
+                            <li *ngIf="item.state == '1'" dw-menu-item dwActionAuthorized [dwActionId]="'assign'"
+                              [dwDefaultAuthorized]="'disabled'">
+                              <span dw-button [dwType]="'primary'" class="act-item" (click)="
+                              modifyForChild('Distribution');
+                              childDistribution.initData(
+                                item.service_order_id,
+                                item
+                              )
+                            " [angularticsCategory]="'服务工单'" angularticsAction="浏览页操作-点击分配" dw-analyticsOn="click"
+                                angularticsLabel="{{
+                              userInfo.tenantId + ',' + userInfo.userId
+                            }}" id="service-order-list-assign">
+                                <img class="action-icon" src="../../../../../../assets/img/icon_assign_nor.png"
+                                  alt="分配" />
+                                <img class="action-icon" src="../../../../../../assets/img/icon_assign_pre.png"
+                                  alt="分配" />
+                                {{ "开始分配" }}
+                              </span>
+                            </li>
+                            <li *ngIf="item.state == '2'" dw-menu-item dwActionAuthorized [dwActionId]="'assign'"
+                              [dwDefaultAuthorized]="'disabled'">
+                              <span dw-button [dwType]="'primary'" class="act-item" (click)="
+                              modifyForChild('Distribution');
+                              childDistribution.initData(
+                                item.service_order_id,
+                                item
+                              )
+                            " [angularticsCategory]="'服务工单'" angularticsAction="浏览页操作-点击分配" dw-analyticsOn="click"
+                                angularticsLabel="{{
+                              userInfo.tenantId + ',' + userInfo.userId
+                            }}" id="service-order-list-assign">
+                                <img class="action-icon" src="../../../../../../assets/img/icon_assign_nor.png"
+                                  alt="分配" />
+                                <img class="action-icon" src="../../../../../../assets/img/icon_assign_pre.png"
+                                  alt="分配" />
+                                {{ "重新分配" }}
+                              </span>
+                            </li>
+                            <li *ngIf="
+                            item.state == '2' &&
+                            !item.assign_to_pool &&
+                            (item.service_site_id == currentServiceSiteId ||
+                              (distribution_all && service_site_type === '1'))
+                          " dw-menu-item dwActionAuthorized [dwActionId]="'distribute'"
+                              [dwDefaultAuthorized]="'disabled'" (click)="
+                            modifyForChild('Dispatch');
+                            childDispatch.initData({service_order_id:item.service_order_id,service_mode:item.default_service_mode})
+                          " [angularticsCategory]="'服务工单'" angularticsAction="浏览页操作-点击派工" dw-analyticsOn="click"
+                              angularticsLabel="{{
+                            userInfo.tenantId + ',' + userInfo.userId
+                          }}" id="service-order-list-distribute">
+                              <span dw-button [dwType]="'primary'" class="act-item">
+                                <img class="action-icon" src="../../../../../../assets/img/icon_distribute_nor.png"
+                                  alt="派工" />
+                                <img class="action-icon" src="../../../../../../assets/img/icon_distribute_pre.png"
+                                  alt="派工" />
+                                {{ "开始派工" }}
+                              </span>
+                            </li>
+                            <li *ngIf="item.state == '1'" dw-menu-item dwActionAuthorized [dwActionId]="'modify'"
+                              [dwDefaultAuthorized]="'disabled'" (click)="modify(item.service_order_id, 'modify')"
+                              title="编辑" [angularticsCategory]="'服务工单'" angularticsAction="修改-进入修改页面"
+                              dw-analyticsOn="click" angularticsLabel="{{
+                            userInfo.tenantId + ',' + userInfo.userId
+                          }}" id="service-order-list-modify-in">
+                              <span dw-button [dwType]="'primary'" class="act-item">
+                                <img class="action-icon" src="../../../../../../assets/img/icon_edit.png" alt="编辑" />
+                                <img class="action-icon" src="../../../../../../assets/img/icon_edit_hover.png"
+                                  alt="编辑" />
+                                编辑
+                              </span>
+                            </li>
+                            <li *ngIf="item.state == '1' || item.state == '2'" dw-menu-item dwActionAuthorized
+                              [dwActionId]="'cancel'" [dwDefaultAuthorized]="'disabled'" (click)="
+                          modifyForChild('Cancel');
+                          childCancel.initData(item.service_order_id)
+                          " [angularticsCategory]="'服务工单'" angularticsAction="浏览页操作-点击取消" dw-analyticsOn="click"
+                              angularticsLabel="{{
+                          userInfo.tenantId + ',' + userInfo.userId
+                          }}" id="service-order-list-cancel">
+                              <span dw-button [dwType]="'primary'" class="act-item">
+                                <img class="action-icon" src="../../../../../../assets/img/icon_cancel_nor.png"
+                                  alt="取消" />
+                                <img class="action-icon" src="../../../../../../assets/img/icon_cancel_pre.png"
+                                  alt="取消" />
+                                取消
+                              </span>
+                            </li>
+                            <li *ngIf="item.state == '1' || item.state == '2'" dw-menu-item dwActionAuthorized
+                              [dwActionId]="'delete'" [dwDefaultAuthorized]="'disabled'">
+                              <div dw-popconfirm [dwPopconfirmTitle]="'删除后无法恢复，确定删除吗?'"
+                                [dwOkText]="'dw-determine' | translate" [dwCancelText]="'dw-cancel' | translate"
+                                [dwPopconfirmPlacement]="'topRight'" (dwOnConfirm)="delete(item.service_order_id)">
+                                <span dw-button [dwType]="'primary'" class="act-item"
+                                  [angularticsCategory]="'menu.isa-order'|translate"
+                                  [angularticsAction]="'info.search-detail'|translate"
+                                  angularticsLabel="{{userInfo.tenantId + ',' + userInfo.userId}}"
+                                  dw-analyticsOn="click">
+                                  <img class="action-icon" style="margin-top: -3px"
+                                    src="../../../../../../assets/img/icon_delete.png" alt="删除" />
+                                  <img class="action-icon" style="margin-top: -3px"
+                                    src="../../../../../../assets/img/icon_delete_hover.png" alt="删除" />
+                                  删除
+                                </span>
+                              </div>
+                            </li>
+
+
+                          </ul>
+                        </dw-dropdown-menu>
+                        <a *ngIf="item.problem_count >0 &&  permissionNameList.includes('problem-feedback') && (item.state == '4' || item.state == '5' || item.state == '6')" (click)="jumpToQuestion(item)">查看问题</a>
+                      </td>
+                    </ng-container>
+                  </tr>
+                </ng-container>
+              </ng-container>
+            </ng-container>
+          </tbody>
+        </dw-table>
+      </ng-container>
+    </div>
+  </div>
+</dw-content>
+
+<!-- 页码总数模板 -->
+<ng-template #totalTemplate let-total>共 {{ dataList.length }} 条</ng-template>
+<!-- 业务员报修时的客户开窗 -->
+<app-customer-for-salesman-opener #child3 [visible]="isCustomerVisible"
+  (customerVisibleChanged)="customerChangeVisible($event)"></app-customer-for-salesman-opener>
+
+<!-- 查看客户档案详情 -->
+<dw-modal [dwBodyStyle]="{ height: 'calc(80vh)', overflow: 'auto', padding: '0 24px' }" [dwMaskClosable]="true"
+  [dwWidth]="1120" [(dwVisible)]="showCustomerDetail" [dwTitle]="'客户档案详情'" [dwFooter]="null"
+  (dwOnCancel)="showCustomerDetail = false">
+  <ng-template dwModalContent>
+    <app-customer-detail #customerChild></app-customer-detail>
+  </ng-template>
+</dw-modal>
+
+
+<!-- 工程师开窗 -->
+<app-engineer-opener #engineerOpener [visible]="isEngineerVisible"
+  (engineerVisibleChanged)="engineerChangeVisible($event)">
+</app-engineer-opener>
