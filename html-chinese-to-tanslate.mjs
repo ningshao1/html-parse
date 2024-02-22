@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from "fs";
 let modifyIndex = 0; // 已修改的数量
 let modifyStatistics = {}; //已经修改的内容合集
 let manualProcessingSetIndex = 0; //无法修改的数量
-let manualProcessingSet = {}; // 需要人工自行处理的内容合集
+let manualProcessingSet = {}; // 无法修改的内容合集
 
 export class HtmlChineseToTanslate {
   constructor(options) {
@@ -16,36 +16,26 @@ export class HtmlChineseToTanslate {
     this.init();
   }
   init() {
-    this.traverseHtml(this.currentHtmlString, "text");
+    this.traverseHtml(this.currentHtmlString);
     this.writeFileSync();
   }
 
-  async writeFileSync() {
-    await writeFileSync(this.filePath, this.currentHtmlString);
-    await writeFileSync(
-      "./modifyStatistics.json",
-      JSON.stringify(modifyStatistics)
-    );
-    console.log("无法修改条数共计：", manualProcessingSetIndex);
-    console.log("已修改条数：", modifyIndex);
-  }
-
   /** 解析成AST */
-  traverseHtml(htmlString = this.originalHtml, translateType) {
+  traverseHtml(htmlString = this.originalHtml) {
     const { rootNodes } = parse(htmlString, {
       canSelfClose: true,
       allowHtmComponentClosingTags: true,
       isTagNameCaseSensitive: true,
     });
-    this.traverseAst(rootNodes, translateType);
+    this.traverseAst(rootNodes);
   }
 
   /** 递归查询ast 查找需要修改的内容 */
-  traverseAst(nodes, translateType = "text") {
+  traverseAst(nodes) {
     for (let i = nodes.length - 1; i >= 0; i--) {
       const node = nodes[i];
       if (node.children && node.children.length > 0) {
-        this.traverseAst(node.children, translateType);
+        this.traverseAst(node.children);
       }
       if (node.type === "text") {
         this.textTranslate(node);
@@ -74,10 +64,8 @@ export class HtmlChineseToTanslate {
 
     // 代表是插值表达式
     if (/^\{\{.*\}\}$/.test(value.trim())) {
-      if (value === "data.is_under_warranty ? '是' : '否") {
-      }
       // 有表达式不处理
-      if (/[\+\-\*\/%]|===|!==|==|\?|!=|<=|<|>=|>|&&|\|\|/.test(value)) {
+      if (/[\+\*\/%]|===|!==|==|\?|\||!=|<=|<|>=|>|&&|\|\|/.test(value)) {
         this.manualProcessingSetHandler(value);
         return;
       }
@@ -85,14 +73,11 @@ export class HtmlChineseToTanslate {
       const match = value.match(/\{\{(.*?)\}\}/);
       let newValue = match ? match[1] : "";
       // 代表已经 translate 过
-      if (newValue.includes("translate")) {
+      if (newValue.includes("translate") || newValue.includes("|")) {
         return;
       }
-
+      
       const key = this.generateIncrementalKey(node);
-      // if(newValue.includes("?")&&newValue.includes(":")){
-      //   debug
-      // }
       const formatterValue = `{{"${this.prefix}.${key}" | translate}}`;
       this.modifyHtmlString({ node, formatterValue, key, newValue });
       return;
@@ -105,7 +90,7 @@ export class HtmlChineseToTanslate {
         node,
         formatterValue,
         key,
-        newValue: value.trim(),
+        newValue: value,
       });
       return;
     }
@@ -124,9 +109,11 @@ export class HtmlChineseToTanslate {
     if (value.includes("translate")) {
       return;
     }
+
+
     // 有表达式不处理
     if (
-      /\{\{.*?\}\}|[\+\-\*\/%]|===|!==|==|!=|\?|<=|<|>=|>|&&|\|\|/.test(value)
+      /\{\{.*?\}\}|[\+\*\/%]|===|!==|==|!=|\?|<=|<|>=|>|&&|\|\|/.test(value)
     ) {
       this.manualProcessingSetHandler(value);
       return;
@@ -163,8 +150,10 @@ export class HtmlChineseToTanslate {
   modifyHtmlString({ node, formatterValue, key, newValue }) {
     try {
       //处理案例 '"test"'=> 'test'
-      newValue = newValue.replace(/^['"]|['"]$/g, "");
-    } catch (e) {}
+      newValue = newValue.trim().replace(/^\s*['"](.*)['"]\s*$/, "$1");
+    } catch (e) {
+      console.err(e);
+    }
     const currentHtmlString = this.currentHtmlString;
     if (!modifyStatistics[this.prefix]) {
       modifyStatistics[this.prefix] = {};
@@ -179,7 +168,9 @@ export class HtmlChineseToTanslate {
     this.currentHtmlString = newStr;
   }
 
-  /** 获取动态key */
+  /** 获取动态key
+   * todo 后期处理成已经存在的内容不重新生成
+   */
   generateIncrementalKey(node) {
     return `dynamic_key_${modifyIndex++}`;
   }
@@ -192,5 +183,22 @@ export class HtmlChineseToTanslate {
       manualProcessingSet[this.filePath] = [];
     }
     ++manualProcessingSetIndex;
+  }
+
+  async writeFileSync() {
+    await writeFileSync(this.filePath, this.currentHtmlString);
+    await writeFileSync(
+      "./modifyStatistics.json",
+      JSON.stringify(modifyStatistics)
+    );
+  }
+}
+
+export class ChineseToTanslateLog {
+  constructor() {}
+  currentFileLog() {}
+  totalLog() {
+    console.log("未修改的数量：", manualProcessingSetIndex);
+    console.log("已修改的数量：", modifyIndex);
   }
 }
