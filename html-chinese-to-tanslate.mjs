@@ -76,7 +76,7 @@ export class HtmlChineseToTanslate {
       if (newValue.includes("translate") || newValue.includes("|")) {
         return;
       }
-      
+
       const key = this.generateIncrementalKey(node);
       const formatterValue = `{{"${this.prefix}.${key}" | translate}}`;
       this.modifyHtmlString({ node, formatterValue, key, newValue });
@@ -109,7 +109,6 @@ export class HtmlChineseToTanslate {
     if (value.includes("translate")) {
       return;
     }
-
 
     // 有表达式不处理
     if (
@@ -197,6 +196,9 @@ export class HtmlChineseToTanslate {
 export class ChineseToTanslateLog {
   constructor() {}
   currentFileLog() {}
+  getTotal() {
+    return modifyIndex;
+  }
   totalLog() {
     console.log("未修改的数量：", manualProcessingSetIndex);
     console.log("已修改的数量：", modifyIndex);

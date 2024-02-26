@@ -6,6 +6,7 @@ let modifyStatistics = {}; //已经修改的内容合集
 export class tsChineseToTanslate {
   constructor(options) {
     const { filePath, prefix = "TSdynamic" } = options;
+    this.filePath = filePath;
     this.prefix = prefix;
     this.NoNeedImportTranslate = false;
     this.project = new Project();
@@ -22,21 +23,30 @@ export class tsChineseToTanslate {
       ) {
         // 检查字符串中是否包含中文
         if (/[\u4e00-\u9fa5]/.test(node.getLiteralText())) {
-          if (!this.NoNeedImportTranslate) {
-            this.addImportTranslate();
-            this.addTranslateService();
-            this.NoNeedImportTranslate = true;
-          }
-          const key = this.generateIncrementalKey();
           if (!modifyStatistics[this.prefix]) {
             modifyStatistics[this.prefix] = {};
           }
+
+          // console.log(modifyIndex, node.getLiteralText());
+          let insertText = "";
+          const key = this.generateIncrementalKey();
+          if (
+            this.filePath.includes(".component.ts") ||
+            this.filePath.includes(".service.ts")
+          ) {
+            if (!this.NoNeedImportTranslate) {
+              this.addImportTranslate();
+              this.addTranslateService();
+              this.NoNeedImportTranslate = true;
+            }
+            insertText = `this.translateService.instant('${this.prefix}.${key}')`;
+          } else {
+            this.addImportCustomTranslate();
+            insertText = `new ASSCLanguage().instant('${this.prefix}.${key}')`;
+          }
           modifyStatistics[this.prefix][key] = node.getLiteralText();
-          console.log(modifyIndex, node.getLiteralText());
           // 输出包含中文的字符串信息
-          node.replaceWithText(
-            `this.translateService.instant('${this.prefix}.${key}')`
-          );
+          node.replaceWithText(insertText);
         }
       }
     });
@@ -60,6 +70,24 @@ export class tsChineseToTanslate {
     }
   }
 
+  addImportCustomTranslate() {
+    // 检查是否已经引入了 TranslateService
+    const isTranslateServiceImported = this.sourceFile.getImportDeclaration(
+      "src/app/implementation/shared/base-feature/service/assc-language.service",
+      "ASSCLanguage"
+    );
+    if (!isTranslateServiceImported) {
+      // 构造 import 语句结构
+      const importDeclaration = {
+        namedImports: [{ name: "ASSCLanguage" }],
+        moduleSpecifier:
+          "src/app/implementation/shared/base-feature/service/assc-language.service",
+      };
+      // 添加 import 语句到文件开头
+      this.sourceFile.addImportDeclaration(importDeclaration);
+    }
+  }
+
   /** 获取动态key
    */
   generateIncrementalKey() {
@@ -69,7 +97,7 @@ export class tsChineseToTanslate {
   //
   addTranslateService() {
     // 遍历文件的顶层语句
-this.sourceFile.forEachChild((child) => {
+    this.sourceFile.forEachChild((child) => {
       // 如果是一个类声明
       if (child.getKind() === SyntaxKind.ClassDeclaration) {
         // 强制类型转换为 ClassDeclaration
@@ -127,6 +155,13 @@ this.sourceFile.forEachChild((child) => {
   }
 }
 
-// new tsChineseToTanslate({
-//   filePath: "./breakdown-maintenance-list.component.ts",
-// });
+export class TSChineseToTanslateLog {
+  constructor() {}
+  currentFileLog() {}
+  getTotal() {
+    return modifyIndex;
+  }
+  totalLog() {
+    console.log("已修改的数量：", modifyIndex);
+  }
+}
