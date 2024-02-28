@@ -9,7 +9,7 @@ import {
 } from "./ts-chinese-to-tanslate.mjs";
 import path from "path";
 const dirPath = path.resolve(
-  "../../work/asscssm_frontend/src/app/implementation"
+  "../../work/web/src/app/implementation"
 );
 fileDisplay(dirPath, [".ts", ".html"], ({ relativePath, type }) => {
   if (type === "ts") {

@@ -2,6 +2,7 @@ import { parse } from "angular-html-parser";
 import { readFileSync, writeFileSync } from "fs";
 
 let modifyIndex = 0; // 已修改的数量
+let curreentModifyIndex = 0;
 let modifyStatistics = {}; //已经修改的内容合集
 let manualProcessingSetIndex = 0; //无法修改的数量
 let manualProcessingSet = {}; // 无法修改的内容合集
@@ -77,14 +78,14 @@ export class HtmlChineseToTanslate {
         return;
       }
 
-      const key = this.generateIncrementalKey(node);
+      const key = this.generateIncrementalKey(node, newValue);
       const formatterValue = `{{"${this.prefix}.${key}" | translate}}`;
       this.modifyHtmlString({ node, formatterValue, key, newValue });
       return;
     }
     //非插值表达式
     if (!/{{[^{}]*}}/.test(value.trim())) {
-      const key = this.generateIncrementalKey(node);
+      const key = this.generateIncrementalKey(node, value);
       const formatterValue = `{{"${this.prefix}.${key}" | translate}}`;
       this.modifyHtmlString({
         node,
@@ -125,7 +126,7 @@ export class HtmlChineseToTanslate {
         attr.name.includes("(")
       )
     ) {
-      const key = this.generateIncrementalKey(attr);
+      const key = this.generateIncrementalKey(attr, value);
       this.modifyHtmlString({
         node: { ...attr, sourceSpan: attr.valueSpan },
         formatterValue: `"'dynamic.${key}' | translate"`,
@@ -170,8 +171,18 @@ export class HtmlChineseToTanslate {
   /** 获取动态key
    * todo 后期处理成已经存在的内容不重新生成
    */
-  generateIncrementalKey(node) {
-    return `dynamic_key_${modifyIndex++}`;
+  generateIncrementalKey(node, value) {
+    const key = this.findKeyByValue(
+      modifyStatistics[this.prefix] || {},
+      value.trim()
+    );
+    curreentModifyIndex++;
+    return key || `dynamic_key_${modifyIndex++}`;
+  }
+
+  findKeyByValue(obj, targetValue) {
+    const foundKey = Object.keys(obj).find((key) => obj[key] === targetValue);
+    return foundKey || null; // 如果没有找到匹配的键，可以返回null或其他适当的值
   }
 
   /** 记录不能处理的数据 */
@@ -187,7 +198,7 @@ export class HtmlChineseToTanslate {
   async writeFileSync() {
     await writeFileSync(this.filePath, this.currentHtmlString);
     await writeFileSync(
-      "./modifyStatistics.json",
+      "./html-modify-statistics.json",
       JSON.stringify(modifyStatistics)
     );
   }
@@ -197,10 +208,10 @@ export class ChineseToTanslateLog {
   constructor() {}
   currentFileLog() {}
   getTotal() {
-    return modifyIndex;
+    return curreentModifyIndex;
   }
   totalLog() {
     console.log("未修改的数量：", manualProcessingSetIndex);
-    console.log("已修改的数量：", modifyIndex);
+    console.log("已修改的数量：", curreentModifyIndex);
   }
 }

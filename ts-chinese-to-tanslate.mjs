@@ -1,6 +1,7 @@
 import { Project, SyntaxKind, Scope } from "ts-morph";
 import { writeFileSync } from "fs";
 let modifyIndex = 0;
+let curreentModifyIndex = 0;
 let modifyStatistics = {}; //已经修改的内容合集
 
 export class tsChineseToTanslate {
@@ -29,7 +30,7 @@ export class tsChineseToTanslate {
 
           // console.log(modifyIndex, node.getLiteralText());
           let insertText = "";
-          const key = this.generateIncrementalKey();
+          const key = this.generateIncrementalKey(node.getLiteralText());
           if (
             this.filePath.includes(".component.ts") ||
             this.filePath.includes(".service.ts")
@@ -90,8 +91,15 @@ export class tsChineseToTanslate {
 
   /** 获取动态key
    */
-  generateIncrementalKey() {
-    return `ts_dynamic_key_${modifyIndex++}`;
+  generateIncrementalKey(value) {
+    const key = this.findKeyByValue(modifyStatistics[this.prefix] || {}, value);
+    curreentModifyIndex++;
+    return key || `ts_dynamic_key_${modifyIndex++}`;
+  }
+
+  findKeyByValue(obj, targetValue) {
+    const foundKey = Object.keys(obj).find((key) => obj[key] === targetValue);
+    return foundKey || null; // 如果没有找到匹配的键，可以返回null或其他适当的值
   }
 
   //
@@ -159,9 +167,9 @@ export class TSChineseToTanslateLog {
   constructor() {}
   currentFileLog() {}
   getTotal() {
-    return modifyIndex;
+    return curreentModifyIndex;
   }
   totalLog() {
-    console.log("已修改的数量：", modifyIndex);
+    console.log("已修改的数量：", curreentModifyIndex);
   }
 }
