@@ -212,6 +212,5 @@ export class ChineseToTanslateLog {
   }
   totalLog() {
     console.log("未修改的数量：", manualProcessingSetIndex);
-    console.log("已修改的数量：", curreentModifyIndex);
   }
 }

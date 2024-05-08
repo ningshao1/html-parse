@@ -6,9 +6,10 @@ let modifyStatistics = {}; //已经修改的内容合集
 
 export class tsChineseToTanslate {
   constructor(options) {
-    const { filePath, prefix = "TSdynamic" } = options;
+    const { filePath, prefix = "TSdynamic", type = "" } = options;
     this.filePath = filePath;
     this.prefix = prefix;
+    this.prefixCustom = type + "-" + 'tsdynamic' + "-" + "custom";
     this.NoNeedImportTranslate = false;
     this.project = new Project();
     this.sourceFile = this.project.addSourceFileAtPath(filePath);
@@ -27,6 +28,9 @@ export class tsChineseToTanslate {
           if (!modifyStatistics[this.prefix]) {
             modifyStatistics[this.prefix] = {};
           }
+          if (!modifyStatistics[this.prefixCustom]) {
+            modifyStatistics[this.prefixCustom] = {};
+          }
 
           // console.log(modifyIndex, node.getLiteralText());
           let insertText = "";
@@ -41,11 +45,13 @@ export class tsChineseToTanslate {
               this.NoNeedImportTranslate = true;
             }
             insertText = `this.translateService.instant('${this.prefix}.${key}')`;
+            modifyStatistics[this.prefix][key] = node.getLiteralText();
           } else {
             this.addImportCustomTranslate();
             insertText = `new ASSCLanguage().instant('${this.prefix}.${key}')`;
+            modifyStatistics[this.prefixCustom][key] = node.getLiteralText();
           }
-          modifyStatistics[this.prefix][key] = node.getLiteralText();
+          
           // 输出包含中文的字符串信息
           node.replaceWithText(insertText);
         }

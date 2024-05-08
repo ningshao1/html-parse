@@ -9,12 +9,16 @@ import {
 } from "./ts-chinese-to-tanslate.mjs";
 import path from "path";
 const dirPath = path.resolve(
-  "../../work/web/src/app/implementation"
+  "../../work/asscbsp_frontend/src/app/implementation"
 );
 fileDisplay(dirPath, [".ts", ".html"], ({ relativePath, type }) => {
+  if(relativePath.includes("shared/base-feature")){
+    return
+  }
   if (type === "ts") {
     new tsChineseToTanslate({
       filePath: path.resolve(relativePath),
+      type:"bsp"
     });
   }
   if (type === "html") {
@@ -28,4 +32,5 @@ fileDisplay(dirPath, [".ts", ".html"], ({ relativePath, type }) => {
     new ChineseToTanslateLog().getTotal() +
       new TSChineseToTanslateLog().getTotal()
   );
+  new ChineseToTanslateLog().totalLog()
 });
